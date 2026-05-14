@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Mom's Got the Aux">
 <title>Mom's Got the Aux — Built for the Boards</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Barlow:wght@400;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -280,8 +281,39 @@ select option { background: var(--surface2); }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ============================================================
-   MODE SELECTOR
+   AUTH SCREEN
 ============================================================ */
+#auth-screen {
+  display: flex; position: fixed; inset: 0; z-index: 500;
+  background: var(--bg); flex-direction: column;
+  padding: 24px; transform: translateX(100%);
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+}
+#auth-screen.show { transform: translateX(0); }
+.auth-logo { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 3px; color: var(--accent); text-shadow: 0 0 30px rgba(0,229,255,0.4); text-align: center; }
+.auth-logo span { color: var(--accent2); }
+.auth-tagline { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; text-align: center; margin-top: 4px; margin-bottom: 40px; }
+.auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 100%; max-width: 380px; }
+.auth-tabs { display: flex; margin-bottom: 20px; background: var(--surface2); border-radius: 8px; padding: 3px; }
+.auth-tab { flex: 1; padding: 8px; text-align: center; border-radius: 6px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); transition: all 0.2s; }
+.auth-tab.active { background: var(--surface); color: var(--text); }
+.auth-input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; outline: none; margin-bottom: 12px; transition: border-color 0.2s; }
+.auth-input:focus { border-color: var(--accent); }
+.auth-submit { width: 100%; padding: 14px; border-radius: 10px; border: none; background: var(--accent); color: #000; font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; cursor: pointer; transition: all 0.15s; margin-top: 4px; }
+.auth-submit:hover { background: #00c8e0; }
+.auth-error { font-size: 12px; color: var(--accent2); font-family: 'DM Mono', monospace; margin-top: 8px; text-align: center; min-height: 18px; }
+.auth-footer { font-size: 11px; color: var(--muted); text-align: center; margin-top: 20px; font-family: 'DM Mono', monospace; line-height: 1.6; }
+
+/* User menu in header */
+.user-menu { position: relative; }
+.user-btn { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #000; font-family: 'Bebas Neue', sans-serif; font-size: 14px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.user-dropdown { position: absolute; right: 0; top: 40px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 6px; min-width: 160px; z-index: 100; display: none; }
+.user-dropdown.open { display: block; }
+.user-dropdown-item { padding: 10px 12px; border-radius: 7px; font-size: 13px; cursor: pointer; font-family: 'DM Mono', monospace; color: var(--text); transition: background 0.15s; }
+.user-dropdown-item:hover { background: var(--surface2); }
+.user-dropdown-item.danger { color: var(--accent2); }
+.user-email { padding: 8px 12px; font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
 .mode-option {
   display: flex; align-items: center; gap: 14px;
   padding: 14px 16px; cursor: pointer; transition: background 0.15s;
@@ -424,6 +456,34 @@ body.mode-customize nav button[data-tab="categories"] { display: flex; }
 </style>
 </head>
 <body>
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+    <div class="ce-back" onclick="closeAuthScreen()">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><polyline points="11,3 5,9 11,15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div>
+      <div class="auth-logo" style="font-size:24px;text-align:left;">Mom's Got <span>the Aux</span></div>
+      <div class="auth-tagline" style="text-align:left;margin-bottom:0;">Your own playlist, your own rules</div>
+    </div>
+  </div>
+  <div class="auth-card">
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-signin" onclick="switchAuthTab('signin')">Sign In</div>
+      <div class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Sign Up</div>
+    </div>
+    <input type="email" class="auth-input" id="auth-email" placeholder="Email address">
+    <input type="password" class="auth-input" id="auth-password" placeholder="Password">
+    <input type="text" class="auth-input" id="auth-name" placeholder="Your name (e.g. Hockey Mom Gina)" style="display:none">
+    <button class="auth-submit" id="auth-submit-btn" onclick="handleAuth()">SIGN IN</button>
+    <div class="auth-error" id="auth-error"></div>
+  </div>
+  <div class="auth-footer">
+    No spam. No ads. Just hockey. 🏒<br>
+    Your account lets you build your own playlist<br>and share it with other parents.
+  </div>
+</div>
+
 <div id="app">
 
   <header>
@@ -431,7 +491,19 @@ body.mode-customize nav button[data-tab="categories"] { display: flex; }
       <div class="logo">Mom's Got <span>the Aux</span></div>
       <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;">Built for the boards · Gina Dempsey</div>
     </div>
-    <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);">PA v3.0</div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);">PA v3.0</div>
+      <!-- Guest: show sign in link -->
+      <div id="guest-signin-btn" style="display:none;font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);cursor:pointer;border:1px solid rgba(0,229,255,0.3);padding:4px 10px;border-radius:6px;" onclick="openAuthScreen()">Sign In</div>
+      <!-- Signed in: show user menu -->
+      <div class="user-menu" id="user-menu" style="display:none;">
+        <button class="user-btn" id="user-btn" onclick="toggleUserMenu()">?</button>
+        <div class="user-dropdown" id="user-dropdown">
+          <div class="user-email" id="user-email-display"></div>
+          <div class="user-dropdown-item" onclick="signOut()">Sign Out</div>
+        </div>
+      </div>
+    </div>
   </header>
 
   <nav>
@@ -556,6 +628,26 @@ body.mode-customize nav button[data-tab="categories"] { display: flex; }
           </div>
           <div class="mode-check" id="check-power"></div>
         </div>
+      </div>
+
+      <div class="section-label">Account</div>
+      <div class="card" id="guest-account-card">
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Want your own playlist?</div>
+            <div class="setting-desc">Create a free account to upload songs, build event categories, and share with other parents.</div>
+          </div>
+        </div>
+        <button class="btn-primary" style="margin-top:8px;" onclick="openAuthScreen()">Create Account / Sign In</button>
+      </div>
+      <div class="card" id="user-account-card" style="display:none;">
+        <div class="setting-row">
+          <div>
+            <div class="setting-label" id="settings-user-name">Signed in</div>
+            <div class="setting-desc" id="settings-user-email"></div>
+          </div>
+        </div>
+        <button class="btn-secondary" style="margin-top:8px;" onclick="signOut()">Sign Out</button>
       </div>
 
       <div class="section-label">Playback</div>
@@ -808,25 +900,42 @@ function handleFileUpload(e) {
 
 function loadAudioFile(file) {
   const name = file.name.replace(/\.[^/.]+$/, '');
-  showToast('Loading ' + name + '...');
+  showToast('Uploading ' + name + '...');
   const abReader = new FileReader();
   abReader.onload = async (e) => {
     try {
       const ctx = getAudioCtx();
-      const rawBuffer = e.target.result; // keep original for storage
-      const ab = rawBuffer.slice(0);     // copy for decoding (decodeAudioData consumes it)
+      const rawBuffer = e.target.result;
+      const ab = rawBuffer.slice(0);
       const audioBuffer = await ctx.decodeAudioData(ab);
+
+      // Upload to Supabase Storage
+      const storagePath = `${currentUser.id}/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await sb.storage.from('audio').upload(storagePath, file, { contentType: file.type });
+      if (uploadError) { showToast('Upload failed: ' + uploadError.message); return; }
+
+      // Save metadata to Supabase
+      const { data: songData, error: dbError } = await sb.from('songs').insert({
+        user_id: currentUser.id,
+        name,
+        duration: audioBuffer.duration,
+        clip_start: 0,
+        clip_end: audioBuffer.duration,
+        storage_path: storagePath
+      }).select().single();
+      if (dbError) { showToast('Could not save song: ' + dbError.message); return; }
+
       const song = {
-        id: Date.now().toString() + Math.floor(Math.random() * 10000).toString(),
+        id: songData.id,
+        supabaseId: songData.id,
         name,
         audioBuffer,
-        _rawBuffer: rawBuffer,
         duration: audioBuffer.duration,
         clipStart: 0,
-        clipEnd: audioBuffer.duration
+        clipEnd: audioBuffer.duration,
+        storagePath
       };
       songs.push(song);
-      await saveData(song.id);
       renderSongList();
       showToast(name + ' added');
     } catch(err) {
@@ -969,10 +1078,14 @@ function previewSong(id) {
 }
 function deleteSong(id) {
   if (!confirm('Remove this song?')) return;
-  songs = songs.filter(s => s.id != id);
-  categories.forEach(c => { c.songIds = c.songIds.filter(sid => sid != id); });
-  deleteSongAudio(id);
-  saveData();
+  const song = songs.find(s => String(s.id) === String(id));
+  songs = songs.filter(s => String(s.id) !== String(id));
+  categories.forEach(c => { c.songIds = c.songIds.filter(sid => String(sid) !== String(id)); });
+  if (song?.supabaseId) {
+    sb.from('songs').delete().eq('id', song.supabaseId).then(() => {});
+    if (song.storagePath) deleteSongAudio(song.storagePath);
+  }
+  saveCategoriesToSupabase();
   renderSongList(); renderCategories(); renderEventGrid();
   showToast('Song removed');
 }
@@ -981,11 +1094,10 @@ function deleteSong(id) {
 //  CLIP EDITOR — OPEN / CLOSE
 // ============================================================
 function openClipEditor(songId) {
-  // Remember which tab we came from
   const activeTab = document.querySelector('.view.active');
   cePreviousTab = activeTab ? activeTab.id.replace('view-', '') : 'library';
 
-  const song = songs.find(s => s.id == songId);
+  const song = songs.find(s => String(s.id) === String(songId));
   if (!song || !song.audioBuffer) { showToast('Song still loading, try again'); return; }
 
   ceSongId = songId;
@@ -1000,8 +1112,6 @@ function openClipEditor(songId) {
   document.getElementById('ce-scroll-hint').textContent = '';
 
   document.getElementById('clip-editor').classList.add('open');
-
-  // Draw after a frame so layout is settled
   requestAnimationFrame(() => { ceDrawAll(); ceUpdateStats(); });
 }
 
@@ -1011,17 +1121,20 @@ function closeClipEditor() {
   switchTab(cePreviousTab);
 }
 
-function saveClip() {
-  const song = songs.find(s => s.id == ceSongId);
+async function saveClip() {
+  const song = songs.find(s => String(s.id) === String(ceSongId));
   if (!song) return;
   song.clipStart = ceClipStart;
   song.clipEnd = ceClipEnd;
-  saveData();
+  // Save clip points to Supabase
+  if (song.supabaseId) {
+    await sb.from('songs').update({ clip_start: ceClipStart, clip_end: ceClipEnd }).eq('id', song.supabaseId);
+  }
   renderSongList();
   ceStopPlayback();
   document.getElementById('clip-editor').classList.remove('open');
   switchTab(cePreviousTab);
-  showToast('✓ Clip saved: ' + ceFmtTime(ceClipStart) + ' → ' + ceFmtTime(ceClipEnd));
+  showToast('Clip saved: ' + ceFmtTime(ceClipStart) + ' → ' + ceFmtTime(ceClipEnd));
 }
 
 // ============================================================
@@ -1319,19 +1432,27 @@ function initDefaults() {
   }
 }
 
-function addCategory() {
+async function addCategory() {
   const name = document.getElementById('cat-name-input').value.trim();
   if (!name) { showToast('Enter a category name'); return; }
-  categories.push({ id: Date.now()+'', name, icon: document.getElementById('cat-icon-input').value, color: document.getElementById('cat-color-input').value, songIds: [], queue: [], queueIndex: 0 });
-  saveData(); renderCategories(); renderEventGrid();
+  const icon = document.getElementById('cat-icon-input').value;
+  const color = document.getElementById('cat-color-input').value;
+  const { data, error } = await sb.from('categories').insert({
+    user_id: currentUser.id, name, icon, color, sort_order: categories.length
+  }).select().single();
+  if (error) { showToast('Could not add category'); return; }
+  categories.push({ id: data.id, supabaseId: data.id, name, icon, color, songIds: [], queue: [], queueIndex: 0 });
+  renderCategories(); renderEventGrid();
   document.getElementById('cat-name-input').value = '';
   showToast(name + ' added');
 }
 
-function deleteCategory(id) {
+async function deleteCategory(id) {
   if (!confirm('Delete this event category?')) return;
+  const cat = categories.find(c => c.id === id);
   categories = categories.filter(c => c.id !== id);
-  saveData(); renderCategories(); renderEventGrid();
+  if (cat?.supabaseId) await sb.from('categories').delete().eq('id', cat.supabaseId);
+  renderCategories(); renderEventGrid();
 }
 
 function renderCategories() {
@@ -1465,7 +1586,7 @@ function toggleAssign(songId) {
   if (idx === -1) cat.songIds.push(String(songId));
   else cat.songIds.splice(idx, 1);
   cat.queue = []; cat.queueIndex = 0;
-  saveData();
+  saveCategoriesToSupabase();
   renderAssignList();
   renderCategories();
   renderEventGrid();
@@ -1515,7 +1636,7 @@ function triggerEvent(catId, btnEl) {
     return;
   }
 
-  saveData();
+  saveMetadata();
 
   document.querySelectorAll('.event-btn.playing').forEach(b => b.classList.remove('playing'));
   btnEl.classList.add('playing', 'flash');
@@ -1532,160 +1653,292 @@ function triggerEvent(catId, btnEl) {
 function setMode(mode) {
   settings.mode = mode;
   applyMode(mode);
-  saveData();
+  saveMetadata();
   showToast('Mode set: ' + { 'just-play': 'Just Play', 'customize': 'Customize', 'power': 'Power User' }[mode]);
 }
 
 function applyMode(mode) {
   document.body.classList.remove('mode-just-play', 'mode-customize', 'mode-power');
   document.body.classList.add('mode-' + mode);
-
-  // Update mode check indicators
   ['just-play', 'customize', 'power'].forEach(m => {
     const check = document.getElementById('check-' + m);
     const option = document.getElementById('mode-' + m);
     if (check) check.classList.toggle('checked', m === mode);
     if (option) option.classList.toggle('active', m === mode);
   });
-
-  // If just-play mode and on a hidden tab, redirect to game
   const activeTab = document.querySelector('.view.active');
   if (mode === 'just-play' && activeTab) {
     const tabId = activeTab.id.replace('view-', '');
     if (tabId === 'library' || tabId === 'categories') switchTab('game');
   }
 }
+
 function toggleSetting(key) {
   settings[key] = !settings[key];
   document.getElementById('toggle-'+key).classList.toggle('on', settings[key]);
-  saveData();
+  saveMetadata();
 }
-function clearAllData() {
-  if (!confirm('Clear ALL songs and categories?')) return;
-  // Wipe IndexedDB audio store
-  openDB().then(d => {
-    const tx = d.transaction(STORE_AUDIO, 'readwrite');
-    tx.objectStore(STORE_AUDIO).clear();
-  }).catch(()=>{});
+
+async function clearAllData() {
+  if (!confirm('Clear ALL songs and categories? This cannot be undone.')) return;
+  // Delete from Supabase
+  if (currentUser) {
+    await sb.from('songs').delete().eq('user_id', currentUser.id);
+    await sb.from('categories').delete().eq('user_id', currentUser.id);
+    // Delete audio files from storage
+    for (const s of songs) {
+      if (s.storagePath) await sb.storage.from('audio').remove([s.storagePath]);
+    }
+  }
   songs = []; categories = []; settings = { shuffle:true, fade:true, fullclip:false, mode:'power' };
-  localStorage.removeItem('sj_songs_meta');
-  stopAll(); saveData(); initDefaults(); renderAll();
+  stopAll(); saveMetadata(); initDefaults(); renderAll();
   showToast('All data cleared');
 }
 
-// ============================================================
-//  PERSISTENCE — IndexedDB for audio files, localStorage for metadata
-// ============================================================
-const DB_NAME = 'SportsjockDB';
-const DB_VERSION = 1;
-const STORE_AUDIO = 'audioFiles'; // stores { id, arrayBuffer }
-
-let db = null;
-
-function openDB() {
-  return new Promise((resolve, reject) => {
-    if (db) { resolve(db); return; }
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = e => {
-      const d = e.target.result;
-      if (!d.objectStoreNames.contains(STORE_AUDIO)) {
-        d.createObjectStore(STORE_AUDIO, { keyPath: 'id' });
-      }
-    };
-    req.onsuccess = e => { db = e.target.result; resolve(db); };
-    req.onerror = () => reject(req.error);
-  });
-}
-
-function dbPut(storeName, record) {
-  return new Promise(async (resolve, reject) => {
-    const d = await openDB();
-    const tx = d.transaction(storeName, 'readwrite');
-    const req = tx.objectStore(storeName).put(record);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-  });
-}
-
-function dbGet(storeName, key) {
-  return new Promise(async (resolve, reject) => {
-    const d = await openDB();
-    const tx = d.transaction(storeName, 'readonly');
-    const req = tx.objectStore(storeName).get(key);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-function dbDelete(storeName, key) {
-  return new Promise(async (resolve, reject) => {
-    const d = await openDB();
-    const tx = d.transaction(storeName, 'readwrite');
-    const req = tx.objectStore(storeName).delete(key);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-  });
-}
-
-// Save metadata to localStorage (small), audio to IndexedDB (large)
-function saveMetadata() {
+async function loadDefaultPlaylist() {
+  // Load public categories and songs for guest/default experience
   try {
-    const meta = songs.map(s => ({
-      id: s.id, name: s.name,
-      duration: s.duration, clipStart: s.clipStart, clipEnd: s.clipEnd
+    const ctx = getAudioCtx();
+    const { data: catsData } = await sb.from('categories')
+      .select('*, category_songs(song_id)')
+      .eq('is_public', true)
+      .order('sort_order');
+
+    const { data: songsData } = await sb.from('songs')
+      .eq('is_public', true);
+
+    songs = [];
+    for (const s of (songsData || [])) {
+      try {
+        const { data: urlData } = sb.storage.from('audio').getPublicUrl(s.storage_path);
+        const resp = await fetch(urlData.publicUrl);
+        const ab = await resp.arrayBuffer();
+        const audioBuffer = await ctx.decodeAudioData(ab.slice(0));
+        songs.push({
+          id: s.id, supabaseId: s.id, name: s.name, audioBuffer,
+          duration: s.duration, clipStart: s.clip_start || 0,
+          clipEnd: s.clip_end || s.duration, storagePath: s.storage_path
+        });
+      } catch(e) { console.warn('Could not load public song:', s.name); }
+    }
+
+    categories = (catsData || []).map(c => ({
+      id: c.id, supabaseId: c.id, name: c.name, icon: c.icon, color: c.color,
+      songIds: (c.category_songs || []).map(cs => cs.song_id),
+      queue: [], queueIndex: 0
     }));
-    localStorage.setItem('sj_songs_meta', JSON.stringify(meta));
-    localStorage.setItem('sj_categories', JSON.stringify(
-      categories.map(c => ({
-        id: c.id, name: c.name, icon: c.icon, color: c.color,
-        songIds: c.songIds.map(String),
-        queue: (c.queue || []).map(String),
-        queueIndex: c.queueIndex || 0
-      }))
-    ));
-    localStorage.setItem('sj_settings', JSON.stringify(settings));
-  } catch(e) { console.warn('Metadata save failed:', e); }
+  } catch(e) { console.warn('Could not load default playlist:', e); }
+}
+const SUPABASE_URL = 'https://yaoeemwxdkuekhdmidpc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_WAzh5pk7Pb8fYCHIjr7kRg_QyGm-Eap';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+
+// ============================================================
+//  AUTH UI
+// ============================================================
+let authMode = 'signin';
+
+function openAuthScreen() {
+  document.getElementById('auth-screen').classList.add('show');
+  document.getElementById('auth-error').textContent = '';
 }
 
-// saveData now saves metadata + persists audio buffer for a single song
+function closeAuthScreen() {
+  document.getElementById('auth-screen').classList.remove('show');
+}
+
+function switchAuthTab(mode) {
+  authMode = mode;
+  document.getElementById('tab-signin').classList.toggle('active', mode === 'signin');
+  document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
+  document.getElementById('auth-name').style.display = mode === 'signup' ? 'block' : 'none';
+  document.getElementById('auth-submit-btn').textContent = mode === 'signin' ? 'SIGN IN' : 'CREATE ACCOUNT';
+  document.getElementById('auth-error').textContent = '';
+}
+
+async function handleAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const name = document.getElementById('auth-name').value.trim();
+  const errEl = document.getElementById('auth-error');
+  errEl.textContent = '';
+
+  if (!email || !password) { errEl.textContent = 'Email and password required'; return; }
+
+  if (authMode === 'signup') {
+    if (!name) { errEl.textContent = 'Please enter your name'; return; }
+    const { data, error } = await sb.auth.signUp({ email, password });
+    if (error) { errEl.textContent = error.message; return; }
+    await sb.from('profiles').insert({ id: data.user.id, email, display_name: name });
+    closeAuthScreen();
+    await onSignedIn(data.user);
+    showToast('Welcome ' + name + '!');
+  } else {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { errEl.textContent = 'Invalid email or password'; return; }
+    closeAuthScreen();
+    await onSignedIn(data.user);
+  }
+}
+
+function updateHeaderForUser(user) {
+  if (user) {
+    document.getElementById('guest-signin-btn').style.display = 'none';
+    document.getElementById('user-menu').style.display = 'flex';
+    document.getElementById('user-btn').textContent = user.email[0].toUpperCase();
+    document.getElementById('user-email-display').textContent = user.email;
+    // Settings cards
+    document.getElementById('guest-account-card').style.display = 'none';
+    document.getElementById('user-account-card').style.display = 'block';
+    document.getElementById('settings-user-email').textContent = user.email;
+  } else {
+    document.getElementById('guest-signin-btn').style.display = 'flex';
+    document.getElementById('user-menu').style.display = 'none';
+    document.getElementById('guest-account-card').style.display = 'block';
+    document.getElementById('user-account-card').style.display = 'none';
+  }
+}
+
+async function onSignedIn(user) {
+  currentUser = user;
+  updateHeaderForUser(user);
+  // Load user's own songs on top of default
+  await loadData();
+  renderAll();
+  showToast('Welcome back!');
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+  currentUser = null;
+  songs = []; categories = []; settings = { shuffle:true, fade:true, fullclip:false, mode:'power' };
+  stopAll();
+  updateHeaderForUser(null);
+  document.getElementById('user-dropdown').classList.remove('open');
+  // Reload default playlist for guest
+  await loadDefaultPlaylist();
+  initDefaults();
+  renderAll();
+  showToast('Signed out');
+}
+
+function toggleUserMenu() {
+  document.getElementById('user-dropdown').classList.toggle('open');
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.user-menu')) {
+    const dd = document.getElementById('user-dropdown');
+    if (dd) dd.classList.remove('open');
+  }
+});
+
+// ============================================================
+//  PERSISTENCE — Supabase
+// ============================================================
+function saveMetadata() {
+  // Settings still in localStorage (tiny, user-specific, not sensitive)
+  try { localStorage.setItem('sj_settings_' + (currentUser?.id || 'local'), JSON.stringify(settings)); } catch(e) {}
+}
+
 async function saveData(songId) {
   saveMetadata();
-  // If a specific song was just added, persist its audio to IndexedDB
-  if (songId) {
-    const song = songs.find(s => s.id == songId);
-    if (song && song._rawBuffer) {
-      try {
-        await dbPut(STORE_AUDIO, { id: song.id, buffer: song._rawBuffer });
-      } catch(e) { console.warn('Audio save failed:', e); }
+}
+
+async function saveSongToSupabase(song) {
+  if (!currentUser) return;
+  const { error } = await sb.from('songs').upsert({
+    id: song.supabaseId || undefined,
+    user_id: currentUser.id,
+    name: song.name,
+    duration: song.duration,
+    clip_start: song.clipStart,
+    clip_end: song.clipEnd,
+    storage_path: song.storagePath
+  }).select().single();
+  if (error) console.error('Song save error:', error);
+}
+
+async function saveCategoriesToSupabase() {
+  if (!currentUser) return;
+  for (const cat of categories) {
+    // Upsert category
+    const { data, error } = await sb.from('categories').upsert({
+      id: cat.supabaseId || undefined,
+      user_id: currentUser.id,
+      name: cat.name,
+      icon: cat.icon,
+      color: cat.color,
+      sort_order: categories.indexOf(cat)
+    }).select().single();
+    if (error) { console.error('Category save error:', error); continue; }
+    if (data) cat.supabaseId = data.id;
+
+    // Save category_songs
+    if (cat.supabaseId) {
+      await sb.from('category_songs').delete().eq('category_id', cat.supabaseId);
+      const rows = cat.songIds.map((sid, i) => {
+        const song = songs.find(s => String(s.id) === String(sid));
+        return song?.supabaseId ? { category_id: cat.supabaseId, song_id: song.supabaseId, queue_position: i } : null;
+      }).filter(Boolean);
+      if (rows.length) await sb.from('category_songs').insert(rows);
     }
   }
 }
 
-async function deleteSongAudio(id) {
-  try { await dbDelete(STORE_AUDIO, id); } catch(e) {}
+async function loadData() {
+  if (!currentUser) return;
+
+  // Load settings
+  try {
+    const raw = localStorage.getItem('sj_settings_' + currentUser.id);
+    if (raw) settings = Object.assign({ shuffle:true, fade:true, fullclip:false, mode:'power' }, JSON.parse(raw));
+  } catch(e) {}
+
+  // Load songs metadata from Supabase
+  const { data: songsData, error: songsError } = await sb.from('songs').select('*').eq('user_id', currentUser.id);
+  if (songsError) { console.error('Songs load error:', songsError); return; }
+
+  // Load audio files from Supabase Storage
+  songs = [];
+  const ctx = getAudioCtx();
+  for (const s of (songsData || [])) {
+    try {
+      const { data: urlData } = sb.storage.from('audio').getPublicUrl(s.storage_path);
+      const resp = await fetch(urlData.publicUrl);
+      const ab = await resp.arrayBuffer();
+      const audioBuffer = await ctx.decodeAudioData(ab.slice(0));
+      songs.push({
+        id: s.id,
+        supabaseId: s.id,
+        name: s.name,
+        audioBuffer,
+        duration: s.duration,
+        clipStart: s.clip_start || 0,
+        clipEnd: s.clip_end || s.duration,
+        storagePath: s.storage_path
+      });
+    } catch(e) { console.warn('Could not load song:', s.name, e); }
+  }
+
+  // Load categories
+  const { data: catsData } = await sb.from('categories').select('*, category_songs(song_id)').eq('user_id', currentUser.id).order('sort_order');
+  categories = (catsData || []).map(c => ({
+    id: c.id,
+    supabaseId: c.id,
+    name: c.name,
+    icon: c.icon,
+    color: c.color,
+    songIds: (c.category_songs || []).map(cs => cs.song_id),
+    queue: [],
+    queueIndex: 0
+  }));
 }
 
-async function loadData() {
-  try {
-    const catsRaw = localStorage.getItem('sj_categories');
-    if (catsRaw) categories = JSON.parse(catsRaw);
-    const settingsRaw = localStorage.getItem('sj_settings');
-    if (settingsRaw) settings = Object.assign({ shuffle:true, fade:true, fullclip:false, mode:'power' }, JSON.parse(settingsRaw));
-
-    const metaRaw = localStorage.getItem('sj_songs_meta');
-    if (metaRaw) {
-      const ctx = getAudioCtx();
-      for (const meta of JSON.parse(metaRaw)) {
-        try {
-          const record = await dbGet(STORE_AUDIO, meta.id);
-          if (!record) { console.warn('No audio found for:', meta.name); continue; }
-          const ab = record.buffer.slice(0);
-          const audioBuffer = await ctx.decodeAudioData(ab);
-          songs.push({ ...meta, audioBuffer, _rawBuffer: record.buffer });
-        } catch(e) { console.warn('Could not reload:', meta.name, e); }
-      }
-    }
-  } catch(e) { console.warn('Load error:', e); }
+async function deleteSongAudio(storagePath) {
+  if (storagePath) await sb.storage.from('audio').remove([storagePath]);
 }
 
 // ============================================================
@@ -1723,15 +1976,33 @@ window.addEventListener('resize', () => { if (ceAudioBuffer && document.getEleme
 //  INIT
 // ============================================================
 (async function init() {
-  await loadData();
-  initDefaults();
-  renderAll();
   document.addEventListener('touchstart', () => getAudioCtx(), { once: true });
   document.addEventListener('click', () => getAudioCtx(), { once: true });
   const ua = document.getElementById('upload-area');
-  ua.addEventListener('dragover', e => { e.preventDefault(); ua.classList.add('dragover'); });
-  ua.addEventListener('dragleave', () => ua.classList.remove('dragover'));
-  ua.addEventListener('drop', e => { e.preventDefault(); ua.classList.remove('dragover'); Array.from(e.dataTransfer.files).forEach(loadAudioFile); });
+  if (ua) {
+    ua.addEventListener('dragover', e => { e.preventDefault(); ua.classList.add('dragover'); });
+    ua.addEventListener('dragleave', () => ua.classList.remove('dragover'));
+    ua.addEventListener('drop', e => { e.preventDefault(); ua.classList.remove('dragover'); Array.from(e.dataTransfer.files).forEach(loadAudioFile); });
+  }
+
+  // Check for existing session
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    // Returning signed-in user
+    await onSignedIn(session.user);
+  } else {
+    // Guest — load default public playlist, no login required
+    updateHeaderForUser(null);
+    await loadDefaultPlaylist();
+    initDefaults();
+    renderAll();
+  }
+
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_OUT') {
+      updateHeaderForUser(null);
+    }
+  });
 })();
 </script>
 </body>
